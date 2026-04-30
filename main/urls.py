@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import login_view, logout_view, dashboard_view, register_view, artist_list_view, artist_manage_view, ticket_category_manage_view, list_venue, list_event
+from .views import login_view, logout_view, dashboard_view, register_view, artist_list_view, artist_manage_view, list_venue, list_event, seats_view, ticket_category_manage_view, ticket_view
 
 urlpatterns = [
     path('', login_view, name='login'),
@@ -11,4 +11,8 @@ urlpatterns = [
     path('ticket-category/', ticket_category_manage_view, name='ticket_category_manage'),
     path('venues/', list_venue, name='list_venue'),
     path('events/', list_event, name='list_event'),
+    path('tickets/my/', ticket_view, name='my_tickets'),
+    path('tickets/manage/', ticket_view, name='ticket_manage'),
+    path('seats/', seats_view, name='seats'),
+
 ]

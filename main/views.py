@@ -4,7 +4,7 @@ import uuid
 # Create your views here.
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import UserAccount, AccountRole, Customer, Organizer, Role, Artist, TicketCategory, Event
+from .models import HasRelationship, Orders, Seat, Ticket, UserAccount, AccountRole, Customer, Organizer, Role, Artist, TicketCategory, Event
 
 def login_view(request):
     # login
@@ -384,3 +384,27 @@ def venues(request):
     # Logika GET (menampilkan list)
     venues = Venue.objects.all()
     return render(request, 'venues.html', {'venues': venues})
+def ticket_view(request):
+    role = request.session.get('role', 'GUEST')
+    tickets = Ticket.objects.all()
+    categories = [TicketCategory.objects.get(category_id=t.tcategory_id) for t in tickets]
+    events = [Event.objects.get(event_id=c.event_id) for c in categories]
+    order = [Orders.objects.get(order_id=t.torder_id) for t in tickets]
+    pelanggan = [Customer.objects.get(customer_id=o.customer_id) for o in order]
+    seats = [HasRelationship.objects.filter(ticket=t).select_related('seat') for t in tickets]
+    context = {
+        'tickets': tickets,
+        'events': events,
+        'categories': categories,
+        'pelanggan': pelanggan,
+        'order': order,
+        'pelanggan': pelanggan,
+        'seats': seats
+    }
+    if role == 'CUSTOMER':
+        return render(request, 'my_tickets.html', context)
+    else:
+        return render(request, 'ticket_manage.html', context)
+    
+def seats_view(request):
+    return render(request, 'seats.html', {'seats': Seat.objects.all()})
