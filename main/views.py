@@ -4,7 +4,7 @@ import uuid
 # Create your views here.
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import UserAccount, AccountRole, Customer, Organizer, Role, Artist
+from .models import UserAccount, AccountRole, Customer, Organizer, Role, Artist, TicketCategory, Event
 
 def login_view(request):
     # login
@@ -179,3 +179,102 @@ def artist_manage_view(request):
         'role': request.session.get('role', 'GUEST')
     }
     return render(request, 'artist_manage.html', context)
+
+def ticket_category_manage_view(request):
+    role = request.session.get('role', 'GUEST')
+    
+    if request.method == 'POST':
+        if role not in ['ADMIN', 'ORGANIZER']:
+            messages.error(request, "Anda tidak memiliki akses untuk melakukan aksi ini.")
+            return redirect('ticket_category_manage')
+
+        action = request.POST.get('action')
+
+        # delete ticket category
+        if action == 'delete':
+            category_id = request.POST.get('category_id')
+            try:
+                category = TicketCategory.objects.get(category_id=category_id)
+                category.delete()
+                messages.success(request, f"Kategori Tiket '{category.category_name}' berhasil dihapus!")
+            except TicketCategory.DoesNotExist:
+                messages.error(request, "Data kategori tiket tidak ditemukan!")
+            return redirect('ticket_category_manage')
+
+        # ambil input untuk create update
+        category_name = request.POST.get('category_name')
+        event_id = request.POST.get('event_id')
+        
+        try:
+            quota = int(request.POST.get('quota'))
+            price = float(request.POST.get('price'))
+        except (ValueError, TypeError):
+            messages.error(request, "Format Kuota atau Harga tidak valid!")
+            return redirect('ticket_category_manage')
+
+        if not category_name or not event_id:
+            messages.error(request, "Seluruh field wajib diisi!")
+            return redirect('ticket_category_manage')
+        if quota <= 0:
+            messages.error(request, "Kuota harus berupa bilangan bulat positif (> 0)!")
+            return redirect('ticket_category_manage')
+        if price < 0:
+            messages.error(request, "Harga tidak boleh negatif (>= 0)!")
+            return redirect('ticket_category_manage')
+
+        # validasi event + venue capacity
+        try:
+            event = Event.objects.select_related('venue').get(event_id=event_id)
+            venue_capacity = event.venue.capacity
+        except Event.DoesNotExist:
+            messages.error(request, "Event tidak valid.")
+            return redirect('ticket_category_manage')
+
+        if action == 'create':
+            # hitung total kuota saat ini untuk event tersebut
+            current_total_quota = TicketCategory.objects.filter(event=event).aggregate(total=Sum('quota'))['total'] or 0
+            
+            if current_total_quota + quota > venue_capacity:
+                messages.error(request, f"Gagal! Total kuota melebihi kapasitas venue ({venue_capacity} kursi).")
+            else:
+                TicketCategory.objects.create(
+                    category_id=str(uuid.uuid4()),
+                    category_name=category_name,
+                    quota=quota,
+                    price=price,
+                    event=event
+                )
+                messages.success(request, "Kategori Tiket baru berhasil dibuat!")
+
+        # update ticket category
+        elif action == 'update':
+            category_id = request.POST.get('category_id')
+            try:
+                category = TicketCategory.objects.get(category_id=category_id)
+                
+                other_categories_quota = TicketCategory.objects.filter(event=event).exclude(category_id=category_id).aggregate(total=Sum('quota'))['total'] or 0
+                
+                if other_categories_quota + quota > venue_capacity:
+                    messages.error(request, f"Gagal Update! Total kuota melebihi kapasitas venue ({venue_capacity} kursi).")
+                else:
+                    category.category_name = category_name
+                    category.quota = quota
+                    category.price = price
+                    category.save()
+                    messages.success(request, "Data Kategori Tiket berhasil diperbarui!")
+            except TicketCategory.DoesNotExist:
+                messages.error(request, "Kategori tiket tidak ditemukan!")
+
+        return redirect('ticket_category_manage')
+
+    # semua roles allowed melakukan Get
+    categories = TicketCategory.objects.select_related('event').order_by('event__event_title', 'category_name')
+    events = Event.objects.all()
+    
+    # role sudah dilempar ke context di bawah, sehingga bisa dipakai di HTML
+    context = {
+        'categories': categories,
+        'events': events,
+        'role': role 
+    }
+    return render(request, 'ticket_category_manage.html', context)

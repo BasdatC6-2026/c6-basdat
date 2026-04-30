@@ -18,6 +18,7 @@
                 <li><a href="/assets/tickets" class="hover:text-blue-500">Tiket </a></li>
                 <li><a href="/assets/orders" class="hover:text-blue-500">Order </a></li>
                 <li><a href="/profile" class="hover:text-blue-500">Profile</a></li>
+                 <li><a href="{% url 'logout' %}" class="text-gray-400 hover:text-red-500">Logout</a></li>
 
             {% elif request.session.role == 'ORGANIZER' %}
                 <li><a href="/dashboard" class="hover:text-blue-500">Dashboard</a></li>
@@ -31,18 +32,22 @@
                 <li><a href="/assets/tickets" class="hover:text-blue-500">Tiket</a></li>
                 <li><a href="/assets/orders" class="hover:text-blue-500">Order</a></li>
                 <li><a href="/profile" class="hover:text-blue-500">Profile</a></li>
+                 <li><a href="{% url 'logout' %}" class="text-gray-400 hover:text-red-500">Logout</a></li>
 
             {% elif request.session.role == 'CUSTOMER' %}
                 <li><a href="/dashboard" class="hover:text-blue-500">Dashboard</a></li>
                 <li><a href="/tickets/my" class="hover:text-blue-500">Tiket Saya</a></li>
                 <li><a href="/orders/my" class="hover:text-blue-500">Pesanan</a></li>
                 <li><a href="/events/search" class="hover:text-blue-500">Cari Event</a></li>
+                <li><a href="/ticket-category" class="hover:text-blue-500">Kategori Tiket</a></li>
                 <li><a href="/promotions" class="hover:text-blue-500">Promosi</a></li>
                 <li><a href="/venues" class="hover:text-blue-500">Venue</a></li>
                 <li><a href="/artists" class="hover:text-blue-500">Artis</a></li>
                 <li><a href="{% url 'logout' %}" class="text-gray-400 hover:text-red-500">Logout</a></li>
 
             {% else %}
+                <li><a href="/ticket-category" class="hover:text-blue-500">Kategori Tiket</a></li>
+                <li><a href="/artists" class="hover:text-blue-500">Artis</a></li>
                 <li><a href="{% url 'login' %}" class="hover:text-blue-500">Login</a></li>
                 <li><a href="/register" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">Registrasi</a></li>
             {% endif %}

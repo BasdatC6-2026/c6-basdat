@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Manajemen Kategori Tiket{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto bg-white p-8 rounded-xl shadow-md border border-gray-100">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-3xl font-extrabold text-gray-800">Daftar Kategori Tiket</h2>
+        
+        <!-- hide tombol Tambah kategori tiket dari guest/customer -->
+        {% if role == 'ADMIN' or role == 'ORGANIZER' %}
+        <button onclick="openModal('createModal')" class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition">
+            + Tambah Kategori Tiket
+        </button>
+        {% endif %}
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-4 p-3 {% if message.tags == 'error' %}bg-red-50 text-red-700 border-red-500{% else %}bg-green-50 text-green-700 border-green-500{% endif %} border-l-4 rounded flex justify-between items-center">
+                <span>{{ message }}</span>
+                <button onclick="this.parentElement.remove()" class="font-bold">&times;</button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- read kategori tiket -->
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-100 text-gray-700 uppercase text-sm leading-normal">
+                    <th class="py-3 px-6 border-b">Acara (Event)</th>
+                    <th class="py-3 px-6 border-b">Nama Kategori</th>
+                    <th class="py-3 px-6 border-b">Harga (Rp)</th>
+                    <th class="py-3 px-6 border-b">Kuota</th>
+                    
+                    <!-- hide header Action dari guest/customer -->
+                    {% if role == 'ADMIN' or role == 'ORGANIZER' %}
+                    <th class="py-3 px-6 border-b text-center">Action</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="text-gray-600 text-sm font-light">
+                {% for cat in categories %}
+                <tr class="border-b border-gray-200 hover:bg-gray-50">
+                    <td class="py-3 px-6">{{ cat.event.event_title }}</td>
+                    <td class="py-3 px-6 font-semibold">{{ cat.category_name }}</td>
+                    <td class="py-3 px-6">{{ cat.price }}</td>
+                    <td class="py-3 px-6">{{ cat.quota }}</td>
+                    
+                    <!-- hide kolom Action dari guest/customer -->
+                    {% if role == 'ADMIN' or role == 'ORGANIZER' %}
+                    <td class="py-3 px-6 text-center">
+                        <!-- tombol update -->
+                        <button onclick="openUpdateModal('{{ cat.category_id }}', '{{ cat.event.event_id }}', '{{ cat.category_name }}', '{{ cat.price }}', '{{ cat.quota }}')" class="text-blue-500 hover:text-blue-700 font-medium mr-3">
+                            Update
+                        </button>
+                        <!-- tombol delete -->
+                        <button onclick="openDeleteModal('{{ cat.category_id }}', '{{ cat.category_name }}')" class="text-red-500 hover:text-red-700 font-medium">
+                            Delete
+                        </button>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <!-- hide column width yang kosong (4 untuk user biasa, 5 untuk admin/org) -->
+                    <td colspan="{% if role == 'ADMIN' or role == 'ORGANIZER' %}5{% else %}4{% endif %}" class="py-6 text-center text-gray-500">
+                        Belum ada data kategori tiket.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- hide rendering Modal di DOM untuk guest/customer -->
+{% if role == 'ADMIN' or role == 'ORGANIZER' %}
+<!-- modal create/update -->
+<div id="formModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <h3 id="modalTitle" class="text-2xl font-bold mb-4 text-gray-800">Tambah Kategori Tiket</h3>
+        <form method="POST" action="{% url 'ticket_category_manage' %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="formAction" value="create">
+            <input type="hidden" name="category_id" id="categoryId">
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-600 mb-1">Acara (Event)</label>
+                <select name="event_id" id="eventSelect" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-blue-500 focus:outline-none">
+                    <option value="">-- Pilih Event --</option>
+                    {% for ev in events %}
+                        <option value="{{ ev.event_id }}">{{ ev.event_title }} (Kapasitas: {{ ev.venue.capacity }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-600 mb-1">Nama Kategori</label>
+                <input type="text" name="category_name" id="categoryName" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-blue-500 focus:outline-none">
+            </div>
+
+            <div class="flex space-x-4">
+                <div class="w-1/2">
+                    <label class="block text-sm font-semibold text-gray-600 mb-1">Harga</label>
+                    <input type="number" step="0.01" min="0" name="price" id="categoryPrice" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="w-1/2">
+                    <label class="block text-sm font-semibold text-gray-600 mb-1">Kuota (> 0)</label>
+                    <input type="number" min="1" name="quota" id="categoryQuota" required class="w-full px-4 py-2 border border-gray-300 rounded focus:ring-blue-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeModal('formModal')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">Cancel</button>
+                <button type="submit" id="submitBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- konfirmasi modal delete -->
+<div id="deleteModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center">
+        <h3 class="text-2xl font-bold mb-2 text-gray-800">Konfirmasi Hapus</h3>
+        <p class="text-gray-600 mb-6">Apakah Anda yakin ingin menghapus kategori tiket ini?</p>
+        
+        <div class="bg-gray-50 p-4 rounded text-left mb-6 border">
+            <p class="text-sm text-gray-500">ID: <span id="delCatId" class="font-mono text-xs text-gray-800"></span></p>
+            <p class="text-sm text-gray-500">Nama: <span id="delCatName" class="font-bold text-gray-800"></span></p>
+        </div>
+
+        <form method="POST" action="{% url 'ticket_category_manage' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="category_id" id="deleteCategoryId">
+            <div class="flex justify-center space-x-4">
+                <button type="button" onclick="closeModal('deleteModal')" class="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 font-semibold">Cancel</button>
+                <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 font-semibold">Confirm Deletion</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openModal(type) {
+        document.getElementById('formModal').classList.remove('hidden');
+        if(type === 'create') {
+            document.getElementById('modalTitle').innerText = 'Tambah Kategori Tiket';
+            document.getElementById('submitBtn').innerText = 'Create';
+            document.getElementById('formAction').value = 'create';
+            // Reset Form
+            document.getElementById('categoryId').value = '';
+            document.getElementById('eventSelect').value = '';
+            document.getElementById('eventSelect').disabled = false; 
+            document.getElementById('categoryName').value = '';
+            document.getElementById('categoryPrice').value = '';
+            document.getElementById('categoryQuota').value = '';
+        }
+    }
+
+    function openUpdateModal(id, event_id, name, price, quota) {
+        openModal('update');
+        document.getElementById('modalTitle').innerText = 'Update Kategori Tiket';
+        document.getElementById('submitBtn').innerText = 'Update';
+        document.getElementById('formAction').value = 'update';
+        
+        // Populate Data
+        document.getElementById('categoryId').value = id;
+        document.getElementById('eventSelect').value = event_id;
+        document.getElementById('categoryName').value = name;
+        
+        // Parsing format Decimal dari Django jika mengandung koma
+        let formattedPrice = parseFloat(price.replace(',', '.'));
+        document.getElementById('categoryPrice').value = formattedPrice;
+        document.getElementById('categoryQuota').value = quota;
+    }
+
+    function openDeleteModal(id, name) {
+        document.getElementById('deleteModal').classList.remove('hidden');
+        document.getElementById('deleteCategoryId').value = id;
+        document.getElementById('delCatId').innerText = id;
+        document.getElementById('delCatName').innerText = name;
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.add('hidden');
+    }
+</script>
+{% endif %}
+{% endblock %}
