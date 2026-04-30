@@ -4,7 +4,7 @@ import uuid
 # Create your views here.
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import UserAccount, AccountRole, Customer, Organizer
+from .models import UserAccount, AccountRole, Customer, Organizer, Role
 
 def login_view(request):
     # login
@@ -44,7 +44,7 @@ def register_view(request):
         password = request.POST.get('password')
         confirm_password = request.POST.get('confirm_password')
         
-        # Validasi Dasar
+        # validasi Dasar
         if password != confirm_password:
             messages.error(request, "Konfirmasi password tidak cocok!")
             return redirect('register')
@@ -58,15 +58,15 @@ def register_view(request):
             return redirect('register')
 
         try:
-            # 1. Buat UserAccount
+            # buat user_account
             user_id = str(uuid.uuid4())
             user = UserAccount.objects.create(
                 user_id=user_id,
                 username=username,
-                password=password # Catatan: Sebaiknya gunakan hashing di produksi
+                password=password
             )
 
-            # 2. Tentukan Role ID berdasarkan pilihan
+            # tentukan Role ID berdasarkan pilihan
             role_map = {
                 'admin': '38aaec88-4c72-435d-b1a6-f761d6f0075c',
                 'customer': 'a5352506-2c32-4126-aa16-26b82baec8eb',
@@ -76,10 +76,10 @@ def register_view(request):
             selected_role_id = role_map.get(role_choice)
             role_obj = Role.objects.get(role_id=selected_role_id)
             
-            # 3. Simpan ke AccountRole
+            # simpan ke AccountRole
             AccountRole.objects.create(role=role_obj, user=user)
 
-            # 4. Simpan ke tabel spesifik (Customer/Organizer)
+            # simpan ke tabel customer/organizer
             if role_choice == 'customer':
                 Customer.objects.create(
                     customer_id=str(uuid.uuid4()),
