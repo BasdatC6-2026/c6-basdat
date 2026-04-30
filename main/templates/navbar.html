@@ -1,0 +1,48 @@
+<nav>
+    <ul>
+        {% if request.session.role == 'ADMIN' %}
+            <!-- Navbar Admin (Login) -->
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/venue/manage">Manajemen Venue</a></li>
+            <li><a href="/seat/manage">Manajemen Kursi</a></li>
+            <li><a href="/ticket/categories">Kategori Tiket</a></li>
+            <li><a href="/ticket/manage">Manajemen Tiket</a></li>
+            <li><a href="/orders/all">Semua Order</a></li>
+            <li><a href="/assets/tickets">Tiket (Aset)</a></li>
+            <li><a href="/assets/orders">Order (Aset)</a></li>
+            <li><a href="/profile">Profile</a></li>
+            <li><a href="{% url 'logout' %}">Logout</a></li>
+
+        {% elif request.session.role == 'ORGANIZER' %}
+            <!-- Navbar Organizer (Login) -->
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/events/my">Event Saya</a></li>
+            <li><a href="/venue/manage">Manajemen Venue</a></li>
+            <li><a href="/seat/manage">Manajemen Kursi</a></li>
+            <li><a href="/ticket/categories">Kategori Tiket</a></li>
+            <li><a href="/ticket/manage">Manajemen Tiket</a></li>
+            <li><a href="/orders/all">Semua Order</a></li>
+            <li><a href="/assets/tickets">Tiket (Aset)</a></li>
+            <li><a href="/assets/orders">Order (Aset)</a></li>
+            <li><a href="/profile">Profile</a></li>
+            <li><a href="{% url 'logout' %}">Logout</a></li>
+
+        {% elif request.session.role == 'CUSTOMER' %}
+            <!-- Navbar Customer (Login) -->
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/tickets/my">Tiket Saya</a></li>
+            <li><a href="/orders/my">Pesanan</a></li>
+            <li><a href="/events/search">Cari Event</a></li>
+            <li><a href="/promos">Promosi</a></li>
+            <li><a href="/venues">Venue</a></li>
+            <li><a href="/artists">Artis</a></li>
+            <li><a href="/profile">Profile</a></li>
+            <li><a href="{% url 'logout' %}">Logout</a></li>
+
+        {% else %}
+            <!-- Navbar Guest (Belum Login) -->
+            <li><a href="{% url 'login' %}">Login</a></li>
+            <li><a href="/register">Registrasi</a></li>
+        {% endif %}
+    </ul>
+</nav>
