@@ -4,7 +4,7 @@ import uuid
 # Create your views here.
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import UserAccount, AccountRole, Customer, Organizer, Role, Artist, TicketCategory, Event
+from .models import HasRelationship, Orders, Seat, Ticket, UserAccount, AccountRole, Customer, Organizer, Role, Artist, TicketCategory, Event
 
 def login_view(request):
     # login
@@ -21,7 +21,7 @@ def login_view(request):
             role_name = account_role.role.role_name if account_role else 'GUEST'
 
             # save session
-            request.session['user_id'] = user.user_id
+            request.session['user_id'] = str(user.user_id)
             request.session['username'] = user.username
             request.session['role'] = role_name
             
@@ -279,3 +279,132 @@ def ticket_category_manage_view(request):
     }
     return render(request, 'ticket_category_manage.html', context)
 
+def list_event(request):
+    # 1. Ambil role dari session
+    role = request.session.get('role', 'ADMIN') # Default ADMIN biar tombol muncul
+    
+    # 2. Data Dummy Venue & Artist (Untuk dropdown di search bar & modal)
+    dummy_venues = [
+        {'id': 1, 'name': 'Stadion Senayan', 'city': 'Jakarta'},
+        {'id': 2, 'name': 'Theater JKT48', 'city': 'Jakarta'},
+        {'id': 3, 'name': 'ICE BSD', 'city': 'Tangerang'},
+    ]
+    
+    dummy_artists = [
+        {'id': 1, 'name': 'Tulus'},
+        {'id': 2, 'name': 'Hindia'},
+        {'id': 3, 'name': 'Sheila on 7'},
+    ]
+    
+    # 3. Data Dummy Event (Isi list utama)
+    dummy_events = [
+        {
+            'id': 1, 
+            'name': 'Konser Merayakan Gelap', 
+            'date': '2026-05-20', 
+            'time': '19:00',
+            'venue': dummy_venues[0],
+            'artists_list': ['Hindia', 'Lomba Sihir'],
+            'min_price': 150000,
+            'poster': {'url': 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800'}
+        },
+        {
+            'id': 2, 
+            'name': 'JKT48 Theater Show', 
+            'date': '2026-06-12', 
+            'time': '14:00',
+            'venue': dummy_venues[1],
+            'artists_list': ['JKT48 Gen 11'],
+            'min_price': 200000,
+            'poster': {'url': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800'}
+        },
+    ]
+
+    # 4. Logika POST (Create & Update)
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'create':
+            # Logika simpan data baru di sini (Dummy redirect)
+            print("Membuat event baru...")
+        elif action == 'update':
+            # Logika update data di sini (Dummy redirect)
+            print(f"Mengupdate event ID: {request.POST.get('event_id')}")
+        
+        return redirect('list_event')
+
+    # 5. Kirim semua ke context
+    context = {
+        'role': role,
+        'events': dummy_events,
+        'venues': dummy_venues,
+        'artists': dummy_artists,
+    }
+    
+    return render(request, 'event.html', context)
+
+def list_venue(request):
+    # 1. Ambil role dari session (penting!)
+    role = request.session.get('role', 'GUEST')
+    
+    # Data dummy agar desain kartu venue tidak kosong
+    dummy_venues = [
+        {'id': 1, 'nama_venue': 'Stadion Senayan', 'alamat': 'Jakarta Pusat', 'kota': 'Jakarta', 'kapasitas': 50000, 'has_reserved': True},
+        {'id': 2, 'nama_venue': 'Theater JKT48', 'alamat': 'fX Sudirman', 'kota': 'Jakarta', 'kapasitas': 400, 'has_reserved': False},
+    ]
+    
+    # 2. Kirim 'role' ke dalam context
+    context = {
+        'venues': dummy_venues,
+        'role': role
+    }
+    return render(request, 'venue.html', context)
+    
+# Fungsi kosong supaya tombol Tambah/Edit tidak error
+def placeholder(request, *args, **kwargs):
+    return render(request, 'venue.html')
+
+def venues(request):
+    if request.method == "POST":
+        action = request.POST.get("action")
+        
+        if action == "CREATE":
+            # Logika simpan venue baru
+            pass
+        elif action == "UPDATE":
+            venue_id = request.POST.get("venue_id")
+            # Logika update venue berdasarkan ID
+            pass
+        elif action == "DELETE":
+            venue_id = request.POST.get("venue_id")
+            # Logika hapus venue berdasarkan ID
+            pass
+            
+        return redirect('venues') # Tetap di halaman yang sama
+
+    # Logika GET (menampilkan list)
+    venues = Venue.objects.all()
+    return render(request, 'venues.html', {'venues': venues})
+def ticket_view(request):
+    role = request.session.get('role', 'GUEST')
+    tickets = Ticket.objects.all()
+    categories = [TicketCategory.objects.get(category_id=t.tcategory_id) for t in tickets]
+    events = [Event.objects.get(event_id=c.event_id) for c in categories]
+    order = [Orders.objects.get(order_id=t.torder_id) for t in tickets]
+    pelanggan = [Customer.objects.get(customer_id=o.customer_id) for o in order]
+    seats = [HasRelationship.objects.filter(ticket=t).select_related('seat') for t in tickets]
+    context = {
+        'tickets': tickets,
+        'events': events,
+        'categories': categories,
+        'pelanggan': pelanggan,
+        'order': order,
+        'pelanggan': pelanggan,
+        'seats': seats
+    }
+    if role == 'CUSTOMER':
+        return render(request, 'my_tickets.html', context)
+    else:
+        return render(request, 'ticket_manage.html', context)
+    
+def seats_view(request):
+    return render(request, 'seats.html', {'seats': Seat.objects.all()})

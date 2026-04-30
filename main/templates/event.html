@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+
+{% block title %}Manajemen Acara - TikTakTuk{% endblock %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
+    .event-page { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .artist-chip.active { background-color: #2563eb; color: white; border-color: #2563eb; }
+    .category-pill { 
+    background: #eff6ff; /* Biru sangat muda */
+    color: #2563eb;      /* Biru teks */
+    padding: 4px 12px; 
+    border-radius: 999px; 
+    font-size: 10px; 
+    font-weight: 800; 
+    text-transform: uppercase;
+    border: 1px solid #dbeafe;
+    display: inline-block;
+}
+</style>
+
+<div class="event-page bg-gray-50 min-h-screen pb-20 text-gray-900">
+    <div class="relative bg-gray-900 text-white rounded-b-[40px] overflow-hidden mb-10 shadow-2xl">
+        <div class="absolute inset-0 opacity-40">
+            <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200" class="w-full h-full object-cover">
+        </div>
+        <div class="relative container mx-auto px-6 py-16 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">Temukan Acara Favoritmu</h1>
+            
+            <div class="max-w-5xl mx-auto bg-white p-3 rounded-2xl shadow-lg mt-8">
+                <form class="flex flex-col lg:flex-row gap-2 text-gray-800" method="GET" action="{% url 'list_event' %}">
+                    <div class="flex-[2] relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Cari judul acara..." class="w-full pl-11 pr-4 py-3 bg-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <select name="venue" class="flex-1 py-3 px-4 bg-gray-100 rounded-xl outline-none">
+                        <option value="">Semua Venue</option>
+                        {% for v in venues %}
+                        <option value="{{ v.id }}" {% if request.GET.venue == v.id|stringformat:"i" %}selected{% endif %}>{{ v.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="artist" class="flex-1 py-3 px-4 bg-gray-100 rounded-xl outline-none">
+                        <option value="">Semua Artist</option>
+                        {% for a in artists %}
+                        <option value="{{ a.id }}" {% if request.GET.artist == a.id|stringformat:"i" %}selected{% endif %}>{{ a.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition duration-200">Cari</button>
+                </form>
+            </div>
+{% if role == 'ADMIN' or role == 'ORGANIZER' %}
+    <button onclick="toggleModal('eventModal')" class="ml-auto bg-blue-600 hover:bg-blue-700 text-white h-[74px] px-8 rounded-2xl font-bold shadow-lg transition-all hover:scale-105 flex items-center gap-3 whitespace-nowrap">
+        <i class="fas fa-plus-circle text-xl"></i>
+        <span>Buat Acara</span>
+    </button>
+    {% endif %}
+            </div>
+    </div>
+
+
+    <!-- Grid Acara -->
+    <div class="container mx-auto px-6">
+        <div id="eventGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Data akan dirender oleh JavaScript dari variabel eventData -->
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     MODAL FORM (CREATE & UPDATE)
+     ========================================== -->
+<div id="eventModal" class="fixed inset-0 z-[60] hidden overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="relative bg-white w-full max-w-2xl rounded-[32px] shadow-2xl p-8">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-gray-800">Buat Acara</h2>
+            
+            <form id="eventForm" class="space-y-5">
+                <input type="hidden" id="editIndex" value="-1">
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Nama Acara</label>
+                    <input type="text" id="inputName" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Konser Senja" required>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Tanggal</label>
+                        <input type="date" id="inputDate" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Waktu</label>
+                        <input type="time" id="inputTime" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Venue</label>
+                    <select id="inputVenue" class="w-full px-4 py-3 bg-gray-50 border rounded-xl outline-none" required>
+                        <option value="">Pilih Venue</option>
+                        {% for v in venues %}
+                        <option value="{{ v.name }}">{{ v.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Kategori Tiket</label>
+                    <div id="categoryWrapper" class="space-y-3">
+                        <!-- Baris Kategori Pertama (Wajib Ada) -->
+                        <div class="flex gap-2 bg-gray-50 p-3 rounded-xl border items-center">
+                            <input type="text" placeholder="Nama Tiket" class="cat-name flex-1 bg-transparent outline-none text-sm" required>
+                            <input type="number" placeholder="Harga" class="cat-price w-28 bg-transparent outline-none text-sm" required>
+                            <input type="number" placeholder="Jumlah" class="cat-price w-28 bg-transparent outline-none text-sm" required>
+                            <div class="w-8"></div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="addCategoryRow()" class="mt-3 text-blue-600 text-xs font-bold uppercase hover:underline">
+                        <i class="fas fa-plus-circle mr-1"></i> Tambah Kategori
+                    </button>
+                </div>
+
+                <div class="flex gap-4 pt-6 border-t">
+                    <button type="button" onclick="closeModal()" class="flex-1 font-bold text-gray-400">Batal</button>
+                    <button type="submit" class="flex-[2] bg-blue-600 text-white py-3.5 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-all">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. STATE MANAGEMENT (Konsep sama seperti venue.html agar tidak reset saat disubmit)
+    let eventData = [
+        {
+            name: "Harmoni Alam Konser",
+            date: "2026-05-15",
+            time: "19:00",
+            venue: "Stadion Senayan",
+            categories: [
+                {name: "Festival", price: 150000},
+                {name: "VIP", price: 500000}
+            ]
+        }
+    ];
+
+    const grid = document.getElementById('eventGrid');
+
+    // 2. RENDER UI
+    function renderEvents() {
+        grid.innerHTML = '';
+        eventData.forEach((event, index) => {
+            // Hitung harga terendah
+            const prices = event.categories.map(c => parseInt(c.price));
+            const minPrice = Math.min(...prices);
+
+            // Buat Bubble Kategori
+            const categoryBubbles = event.categories.map(c => `<span class="category-pill">${c.name}</span>`).join(' ');
+
+            grid.innerHTML += `
+                <div class="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100 relative group">
+                    {% if role == 'ADMIN' or role == 'ORGANIZER' %}
+                    <div class="absolute top-4 right-4 z-10">
+                        <button onclick="editEvent(${index})" class="bg-white/90 backdrop-blur text-blue-600 px-4 py-2 rounded-full shadow-md hover:bg-blue-600 hover:text-white transition-all text-xs font-bold flex items-center gap-2">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                    {% endif %}
+
+                    <div class="h-48 bg-gray-200 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1459749411177-042180ce673c?auto=format&fit=crop&w=800" class="w-full h-full object-cover">
+                        <div class="absolute bottom-4 left-4 flex flex-wrap gap-1">
+                            ${categoryBubbles}
+                        </div>
+                    </div>
+
+                    <div class="p-6">
+                        <h5 class="text-xl font-bold mb-2 text-gray-800">${event.name}</h5>
+                        
+                        <div class="space-y-2 text-sm text-gray-500 mb-6">
+                            <div class="flex items-center gap-2">
+                                <i class="far fa-calendar-alt w-5 text-blue-500"></i>
+                                <span>${event.date}</span>
+                                <span class="mx-1">•</span>
+                                <i class="far fa-clock w-5 text-blue-500"></i>
+                                <span>${event.time} WIB</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-map-marker-alt w-5 text-blue-500"></i>
+                                <span>${event.venue}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-4 border-t">
+                            <div>
+                                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Mulai dari</p>
+                                <p class="text-lg font-extrabold text-gray-900">Rp ${minPrice.toLocaleString()}</p>
+                            </div>
+                            <button class="bg-gray-900 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-blue-600 transition-all">Beli Tiket</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // 3. FORM LOGIC
+    function toggleModal(id) {
+        document.getElementById('eventModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        document.getElementById('eventModal').classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        document.getElementById('eventForm').reset();
+        document.getElementById('editIndex').value = "-1";
+        document.getElementById('modalTitle').innerText = "Buat Acara";
+        resetCategoryRows();
+    }
+
+function addCategoryRow(name='', price='', stock='') {
+    const wrapper = document.getElementById('categoryWrapper');
+    const div = document.createElement('div');
+    
+    // Kita kasih border merah tipis biar kelihatan areanya
+    div.className = "flex gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200 items-center mb-2 category-row";
+    
+    div.innerHTML = `
+        <input type="text" placeholder="Nama" class="cat-name flex-1 bg-white p-2 border rounded-lg outline-none text-sm" value="${name}" required>
+        
+        <div class="flex items-center gap-1">
+            <span class="text-gray-400 text-xs">Rp</span>
+            <input type="number" placeholder="Harga" min="1" class="cat-price w-24 bg-white p-2 border rounded-lg outline-none text-sm font-bold" value="${price}" required>
+        </div>
+
+        <div class="flex items-center gap-1">
+            <span class="text-gray-400 text-xs">Stok</span>
+            <input type="number" placeholder="Qty" min="0" class="cat-stock w-16 bg-white p-2 border rounded-lg outline-none text-sm" value="${stock}" required>
+        </div>
+        
+        <!-- TOMBOL HAPUS: Dibuat mencolok dengan warna merah -->
+        <button type="button" onclick="this.parentElement.remove()" class="bg-red-100 text-red-600 w-10 h-10 rounded-lg flex items-center justify-center hover:bg-red-600 hover:text-white transition-all">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    `;
+    
+    wrapper.appendChild(div);
+}
+
+// Pastikan saat buka modal, fungsi ini dipanggil
+function openCreateModal() {
+    const wrapper = document.getElementById('categoryWrapper');
+    wrapper.innerHTML = ''; // Kosongkan dulu
+    addCategoryRow(); // Tambah baris pertama yang ada tombol hapusnya
+    document.getElementById('eventModal').classList.remove('hidden');
+}    function resetCategoryRows() {
+        const wrapper = document.getElementById('categoryWrapper');
+        wrapper.innerHTML = `
+            <div class="flex gap-2 bg-gray-50 p-3 rounded-xl border items-center">
+                <input type="text" placeholder="Nama Tiket" class="cat-name flex-1 bg-transparent outline-none text-sm" required>
+                <input type="number" placeholder="Harga" class="cat-price w-28 bg-transparent outline-none text-sm" required>
+                <div class="w-8"></div>
+            </div>
+        `;
+    }
+
+    // 4. SUBMIT (CREATE & UPDATE)
+    document.getElementById('eventForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const names = document.querySelectorAll('.cat-name');
+    const prices = document.querySelectorAll('.cat-price');
+    const stocks = document.querySelectorAll('.cat-stock');
+    
+    let categories = [];
+    let isValid = true;
+
+    names.forEach((n, i) => {
+        const price = parseFloat(prices[i].value);
+        const stock = parseInt(stocks[i].value);
+
+        // Validasi: Harga > 0 dan Sisa >= 0
+        if (price <= 0 || stock < 0) {
+            alert(`Kategori ${n.value || (i+1)} tidak valid! Harga harus > 0 dan sisa tiket harus >= 0.`);
+            isValid = false;
+            return;
+        }
+
+        categories.push({
+            name: n.value,
+            price: price,
+            stock: stock // Menyimpan sisa tiket
+        });
+    });
+
+    if (!isValid) return;
+
+    const data = {
+        name: document.getElementById('inputName').value,
+        date: document.getElementById('inputDate').value,
+        time: document.getElementById('inputTime').value,
+        venue: document.getElementById('inputVenue').value,
+        categories: categories
+    };
+
+    const idx = parseInt(document.getElementById('editIndex').value);
+    if (idx > -1) eventData[idx] = data;
+    else eventData.push(data);
+
+    renderEvents();
+    closeModal();
+});
+
+    // 5. EDIT ACTION
+    function editEvent(index) {
+        const event = eventData[index];
+        document.getElementById('modalTitle').innerText = "Edit Acara";
+        document.getElementById('editIndex').value = index;
+        
+        document.getElementById('inputName').value = event.name;
+        document.getElementById('inputDate').value = event.date;
+        document.getElementById('inputTime').value = event.time;
+        document.getElementById('inputVenue').value = event.venue;
+
+        // Render Kategori ke form
+        const wrapper = document.getElementById('categoryWrapper');
+        wrapper.innerHTML = '';
+        event.categories.forEach((cat, i) => {
+            if (i === 0) {
+                // Baris pertama (tidak bisa dihapus)
+                wrapper.innerHTML = `
+                    <div class="flex gap-2 bg-gray-50 p-3 rounded-xl border items-center">
+                        <input type="text" class="cat-name flex-1 bg-transparent outline-none text-sm" value="${cat.name}" required>
+                        <input type="number" class="cat-price w-24 bg-transparent outline-none text-sm font-bold" value="${cat.price}" required>
+                        <input type="number" class="cat-stock w-20 bg-transparent outline-none text-sm" value="${cat.stock}" required>
+                        <div class="w-8"></div>
+                    </div>`;
+            } else {
+                // Baris tambahan (bisa dihapus)
+                addCategoryRow(cat.name, cat.price, cat.stock);
+            }
+        });
+
+        toggleModal('eventModal');
+    }
+
+    // Initial Render
+    renderEvents();
+</script>
+{% endblock %}
