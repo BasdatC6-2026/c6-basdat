@@ -80,13 +80,9 @@ WSGI_APPLICATION = 'c6_tiktaktuk.wsgi.application'
 
 # database
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "tiktaktuk_db",             
-        "USER": "johannes_nichola_simatupang", 
-        "PASSWORD": "postgres",        
-        "HOST": "127.0.0.1",              
-        "PORT": "15001",                    
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 # Password validation
