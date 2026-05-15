@@ -81,8 +81,9 @@ WSGI_APPLICATION = 'c6_tiktaktuk.wsgi.application'
 
 # database
 DATABASES = {
-    "default": {
-            #TODO:  tambah database
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 # Password validation
