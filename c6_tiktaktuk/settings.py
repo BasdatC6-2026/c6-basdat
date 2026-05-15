@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-98ljn@k^#6_4n_ri=qgex5*8b#&yj2s#(h@py2^p*(=7kg!9bd'
+SECRET_KEY = ''
 
 # SECURITY WARNING: don't run with debug turned on in production!
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'main',
-    'order_waldan',
+    'order_promo',
 ]
 
 MIDDLEWARE = [
@@ -82,12 +82,7 @@ WSGI_APPLICATION = 'c6_tiktaktuk.wsgi.application'
 # database
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "tiktaktuk_db",             
-        "USER": "johannes_nichola_simatupang", 
-        "PASSWORD": "postgres",        
-        "HOST": "127.0.0.1",              
-        "PORT": "15001",                    
+            #TODO:  tambah database
     }
 }
 # Password validation
